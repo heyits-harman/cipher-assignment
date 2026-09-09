@@ -1,7 +1,7 @@
 import express from "express";
-// import authValidation from "./middleware/auth";
-// import userRoutes from "./route/userRoutes";
-
+import problemRoutes from "./route/problemRoutes";
+import attemptRoutes from "./route/attemptRoutes";
+import evaluationRoutes from "./route/evaluationRoutes";
 const app = express();
 
 app.use(express.json());
@@ -17,6 +17,8 @@ app.use((req, res, next) => {
   next();
 });
 
-//app.use("/users", userRoutes);
+app.use("/problems", problemRoutes);
+app.use("/attempts", attemptRoutes);
+app.use("/evaluations", evaluationRoutes);
 
 export default app;
