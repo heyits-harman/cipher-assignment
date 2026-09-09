@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum AttemptStatus {
+  DRAFT
+  SUBMITTED
+  EVALUATING
+  COMPLETED
+  FAILED
+}
+
+enum EvaluationStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum EvaluatorType {
+  STRUCTURAL
+  AI
+  HYBRID
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempts PracticeAttempt[]
+
+  @@map("users")
+}
+
+
+model Problem {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  description String
+  difficulty  Difficulty @default(MEDIUM)
+
+  // Requirements the learner must consider
+  requirements Json
+
+  // Concepts the evaluator should look for
+  evaluationCriteria EvaluationCriterion[]
+
+  attempts PracticeAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("problems")
+}
+
+model EvaluationCriterion {
+  id        String @id @default(cuid())
+  problemId String
+
+  name        String
+  description String
+  weight      Float
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@map("evaluation_criteria")
+}
+
+model PracticeAttempt {
+  id        String        @id @default(cuid())
+  userId    String
+  problemId String
+  status    AttemptStatus @default(DRAFT)
+
+  startedAt   DateTime @default(now())
+  submittedAt DateTime?
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  submission Submission?
+  evaluation Evaluation?
+
+  @@index([userId])
+  @@index([problemId])
+  @@index([userId, problemId])
+  @@map("practice_attempts")
+}
+
+model Submission {
+  id        String @id @default(cuid())
+  attemptId String @unique
+
+  // Structured LLD solution
+  classes       Json
+  relationships Json
+
+  // Learner's explanation of design decisions
+  explanation String?
+
+  createdAt DateTime @default(now())
+
+  attempt PracticeAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@map("submissions")
+}
+
+model Evaluation {
+  id        String @id @default(cuid())
+  attemptId String @unique
+
+  status EvaluationStatus @default(PENDING)
+
+  // Final score
+  overallScore Float?
+
+  // Results from deterministic evaluation
+  structuralScore Float?
+  structuralFeedback Json?
+
+  // Results from AI evaluation
+  aiScore Float?
+  aiFeedback Json?
+
+  // Combined feedback shown to learner
+  finalFeedback Json?
+
+  evaluatorType EvaluatorType @default(HYBRID)
+
+  errorMessage String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  attempt PracticeAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@map("evaluations")
+}
