@@ -106,20 +106,12 @@ model PracticeAttempt {
 }
 
 model Submission {
-  id        String @id @default(cuid())
-  attemptId String @unique
-
-  // Structured LLD solution
-  classes       Json
-  relationships Json
-
-  // Learner's explanation of design decisions
-  explanation String?
-
+  id        String   @id @default(cuid())
+  attemptId String   @unique
+  content   String
   createdAt DateTime @default(now())
 
   attempt PracticeAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-
   @@map("submissions")
 }
 
