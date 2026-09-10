@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from '../../lib/prisma'
+import { runEvaluation } from '../services/evaluation'
 
 export const createAttempt = async (req: Request, res: Response) => {
   try{
@@ -81,7 +82,7 @@ export const submitAttempt = async (req: Request, res: Response) => {
     });
 
     // Awaited for now since text-based checks are fast.
-    //await runEvaluation(id);
+    await runEvaluation(id);
 
     const result = await prisma.practiceAttempt.findUnique({
       where: { id },
