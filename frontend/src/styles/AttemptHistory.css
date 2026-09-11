@@ -1,0 +1,271 @@
+.attempt-history {
+  padding: 32px 0 64px;
+}
+
+.attempt-history-header {
+  margin-bottom: 32px;
+}
+
+.attempt-history-header-badge {
+  margin-bottom: 12px;
+}
+
+.attempt-history-header-title {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+.attempt-history-header-desc {
+  font-size: 16px;
+  color: var(--color-slate-gray);
+  line-height: 1.5;
+}
+
+.attempt-history-problems {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 32px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.attempt-history-problem-btn {
+  padding: 10px 18px;
+  border-radius: var(--radius-button);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--color-hairline);
+  background-color: var(--color-paper);
+  color: var(--color-ink-navy);
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attempt-history-problem-btn.active {
+  border-color: var(--color-signal-blue);
+  background-color: #e6f0ff;
+  color: var(--color-signal-blue);
+}
+
+.attempt-history-problem-difficulty {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: var(--color-pebble);
+  color: var(--color-slate-gray);
+}
+
+.attempt-history-loading {
+  padding: 40px;
+  text-align: center;
+}
+
+.attempt-history-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-signal-blue);
+  border-top-color: transparent;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+}
+
+.attempt-history-loading-text {
+  color: var(--color-slate-gray);
+}
+
+.attempt-history-error {
+  padding: 32px;
+  color: #dc2626;
+}
+
+.attempt-history-error-text {
+  font-weight: 600;
+}
+
+.attempt-history-empty {
+  padding: 48px;
+  text-align: center;
+}
+
+.attempt-history-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--color-pebble);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: var(--color-slate-gray);
+}
+
+.attempt-history-empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-ink-navy);
+  margin-bottom: 8px;
+}
+
+.attempt-history-empty-desc {
+  font-size: 14px;
+  color: var(--color-slate-gray);
+  margin-bottom: 24px;
+}
+
+.attempt-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.attempt-history-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.attempt-history-list-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-ink-navy);
+}
+
+.attempt-history-try-btn {
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+.attempt-history-card {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.attempt-history-card:hover {
+  border-color: var(--color-signal-blue);
+  transform: translateX(4px);
+}
+
+.attempt-history-card-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.attempt-history-card-index {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: var(--color-pebble);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--color-ink-navy);
+  flex-shrink: 0;
+}
+
+.attempt-history-card-info-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.attempt-history-card-id {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink-navy);
+}
+
+.attempt-history-card-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-badge);
+}
+
+.attempt-history-card-status.completed {
+  background-color: #e6f7ed;
+  color: #0d8a43;
+}
+
+.attempt-history-card-status.failed {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.attempt-history-card-status.draft,
+.attempt-history-card-status.other {
+  background-color: #e6f0ff;
+  color: #004eba;
+}
+
+.attempt-history-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--color-slate-gray);
+}
+
+.attempt-history-card-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.attempt-history-card-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.attempt-history-card-score {
+  text-align: right;
+}
+
+.attempt-history-card-score-value {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.attempt-history-card-score-value.good {
+  color: #0d8a43;
+}
+
+.attempt-history-card-score-value.needs-work {
+  color: #d97706;
+}
+
+.attempt-history-card-score-label {
+  font-size: 11px;
+  color: var(--color-slate-gray);
+  display: block;
+}
+
+.attempt-history-card-no-score {
+  font-size: 13px;
+  color: var(--color-slate-gray);
+}
+
+.attempt-history-card-arrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--color-pebble);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-navy);
+}

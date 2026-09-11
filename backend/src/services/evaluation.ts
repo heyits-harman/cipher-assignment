@@ -24,7 +24,7 @@ interface ProblemPayload {
   requirements: unknown;
 }
 
-function runStructuralCheck(
+export function runStructuralCheck(
   content: string,
   criteria: Criterion[]
 ): StructureCheckResult {
