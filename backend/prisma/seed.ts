@@ -1,113 +1,125 @@
-// import { prisma } from '../lib/prisma';
-// import { Role, LeadStatus, ActivityType } from '../generated/prisma/enums';
-// import bcrypt from 'bcrypt';
+import { prisma } from "../lib/prisma";
 
-// async function main() {
-//   console.log("🌱 Starting database seed...");
+async function main() {
+  console.log("🌱 Seeding database...");
 
-//   // 1. Clean existing data (Optional: clears tables before seeding)
-//   await prisma.activity.deleteMany({});
-//   await prisma.note.deleteMany({});
-//   await prisma.lead.deleteMany({});
-//   await prisma.user.deleteMany({});
+  // Demo user — no auth in this project, so we seed one directly
+  // instead of exposing a signup route (see earlier decision to drop /users)
+  const demoUser = await prisma.user.upsert({
+    where: { email: "demo@example.com" },
+    update: {},
+    create: {
+      email: "demo@example.com",
+      name: "Demo Learner",
+    },
+  });
+  console.log(`✅ Demo user ready: ${demoUser.id}`);
 
-//   // 2. Hash default passwords
-//   const hashedPassword = await bcrypt.hash("admin123", 10);
-//   const memberPassword = await bcrypt.hash("member123", 10);
+  // Clear old criteria so re-running the seed doesn't duplicate them
+  await prisma.evaluationCriterion.deleteMany({});
 
-//   // 3. Create Default Users (1 Admin, 2 Members)
-//   const admin = await prisma.user.create({
-//     data: {
-//       email: "admin@example.com",
-//       name: "Admin User",
-//       password: hashedPassword,
-//       role: Role.ADMIN,
-//     },
-//   });
+  // --- Problem 1: Parking Lot ---
+  const parkingLot = await prisma.problem.upsert({
+    where: { slug: "parking-lot" },
+    update: {},
+    create: {
+      title: "Parking Lot",
+      slug: "parking-lot",
+      description: "Design a parking lot system that supports multiple vehicle types and tracks spot availability.",
+      difficulty: "MEDIUM",
+      requirements: {
+        overview:
+          "Design a parking lot with multiple floors, multiple spot sizes, and multiple vehicle types (motorcycle, car, bus).",
+        mustHandle: [
+          "Assigning a vehicle to a suitable spot based on size",
+          "Rejecting entry when the lot is full",
+          "Calculating a parking fee based on duration",
+          "Supporting more than one entry/exit gate",
+        ],
+      },
+      evaluationCriteria: {
+        create: [
+          {
+            name: "Vehicle abstraction",
+            description: "Distinct vehicle types are represented with a shared abstraction (interface/base class), not hardcoded if/else on type.",
+            weight: 3,
+          },
+          {
+            name: "Spot allocation strategy",
+            description: "Spot assignment logic is separated from the parking lot itself, so the strategy could be swapped later.",
+            weight: 3,
+          },
+          {
+            name: "Full lot handling",
+            description: "The design explicitly handles the no-available-spot case rather than ignoring it.",
+            weight: 2,
+          },
+          {
+            name: "Payment decoupling",
+            description: "Fee calculation/payment is a separate responsibility from spot management.",
+            weight: 2,
+          },
+        ],
+      },
+    },
+  });
+  console.log(`✅ Problem ready: ${parkingLot.slug}`);
 
-//   const member1 = await prisma.user.create({
-//     data: {
-//       email: "member1@example.com",
-//       name: "John Member",
-//       password: memberPassword,
-//       role: Role.MEMBER,
-//     },
-//   });
+  // --- Problem 2: Vending Machine ---
+  const vendingMachine = await prisma.problem.upsert({
+    where: { slug: "vending-machine" },
+    update: {},
+    create: {
+      title: "Vending Machine",
+      slug: "vending-machine",
+      description: "Design a vending machine that accepts payment, dispenses items, and handles change and out-of-stock cases.",
+      difficulty: "EASY",
+      requirements: {
+        overview:
+          "Design a vending machine that sells multiple products, accepts cash and card, and returns change.",
+        mustHandle: [
+          "Selecting a product and checking stock",
+          "Accepting payment and calculating change",
+          "Handling insufficient payment",
+          "Restocking items",
+        ],
+      },
+      evaluationCriteria: {
+        create: [
+          {
+            name: "State machine",
+            description: "The machine's behavior is modeled as explicit states (idle, selecting, paying, dispensing) rather than scattered flags.",
+            weight: 3,
+          },
+          {
+            name: "Payment strategy",
+            description: "Different payment methods (cash, card) are handled through a shared interface, not duplicated logic per type.",
+            weight: 3,
+          },
+          {
+            name: "Stock handling",
+            description: "Out-of-stock and insufficient-payment cases are explicitly handled, not left implicit.",
+            weight: 2,
+          },
+          {
+            name: "Inventory responsibility",
+            description: "Inventory/stock tracking is a separate responsibility from the machine's state logic.",
+            weight: 2,
+          },
+        ],
+      },
+    },
+  });
+  console.log(`✅ Problem ready: ${vendingMachine.slug}`);
 
-//   const member2 = await prisma.user.create({
-//     data: {
-//       email: "member2@example.com",
-//       name: "Sarah Member",
-//       password: memberPassword,
-//       role: Role.MEMBER,
-//     },
-//   });
+  console.log("🎉 Seed complete!");
+}
 
-//   console.log("✅ Users created:");
-//   console.log(`   - Admin:    admin@example.com  | Pass: admin123`);
-//   console.log(`   - Member 1: member@example.com | Pass: member123`);
-//   console.log(`   - Member 2: member2@example.com | Pass: member123`);
-
-//   // 4. Sample Lead Data
-//   const members = [member1.id, member2.id];
-//   const statuses = [
-//     LeadStatus.NEW,
-//     LeadStatus.CONTACTED,
-//     LeadStatus.QUALIFIED,
-//     LeadStatus.PROPOSAL_SENT,
-//     LeadStatus.WON,
-//     LeadStatus.LOST,
-//   ];
-
-//   const rawLeads = [
-//     { name: "Acme Corp", email: "contact@acme.com", company: "Acme Inc" },
-//     { name: "Stark Industries", email: "info@stark.com", company: "Stark Ltd" },
-//     { name: "Wayne Enterprises", email: "bruce@wayne.com", company: "Wayne Tech" },
-//     { name: "Cyberdyne Systems", email: "support@cyberdyne.com", company: "Cyberdyne" },
-//     { name: "Umbrella Corp", email: "lab@umbrella.com", company: "Umbrella Bio" },
-//     { name: "Initech", email: "peter@initech.com", company: "Initech Software" },
-//     { name: "Pied Piper", email: "richard@piedpiper.com", company: "Pied Piper Inc" },
-//     { name: "Hooli", email: "gavin@hooli.com", company: "Hooli Corp" },
-//     { name: "Massive Dynamic", email: "contact@massivedynamic.com", company: "Massive Dynamic" },
-//     { name: "Aperture Science", email: "cave@aperture.com", company: "Aperture Labs" },
-//   ];
-
-//   // 5. Insert Leads & initial activities
-//   for (let i = 0; i < rawLeads.length; i++) {
-//     const leadData = rawLeads[i]!;
-//     const assignedToId = members[i % members.length]!;
-//     const status = statuses[i % statuses.length]!;
-
-//     const lead = await prisma.lead.create({
-//       data: {
-//         name: leadData.name,
-//         email: leadData.email,
-//         company: leadData.company,
-//         status,
-//         assignedToId,
-//       },
-//     });
-
-//     await prisma.activity.create({
-//       data: {
-//         type: ActivityType.CREATED,
-//         description: "Lead created and assigned to team member.",
-//         lead: { connect: { id: lead.id } },
-//         user: { connect: { id: admin.id } },
-//       },
-//     });
-
-//   }
-
-//   console.log("✅ Sample leads and activities created successfully!");
-//   console.log("🎉 Seeding completed!");
-// }
-
-// main()
-//   .catch((e) => {
-//     console.error("❌ Seeding error:", e);
-//     process.exit(1);
-//   })
-//   .finally(async () => {
-//     await prisma.$disconnect();
-//   });
+main()
+  .catch((e) => {
+    console.error("❌ Seeding error:", e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

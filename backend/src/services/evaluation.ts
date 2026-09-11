@@ -64,70 +64,107 @@ async function runAICheck(
 ): Promise<{ score: number; results: CriterionResult[] }> {
 
   const prompt = `
-    You are reviewing a learner's Low-Level Design solution.
+    You are a Staff Software Engineer evaluating a learner's Low-Level Design (LLD) submission.
 
-    Problem: ${problem.title}
-    Requirements: ${JSON.stringify(problem.requirements)}
+    ### Task Context
+    Problem Title: ${problem.title}
+    Problem Requirements: ${JSON.stringify(problem.requirements)}
 
-    Learner's submission:
+    ### Learner Submission:
     """
     ${content}
     """
 
-    Evaluate against these criteria:
-    ${criteria.map((c) => `- ${c.name}: ${c.description}`).join("\n")}
+    ### Evaluation Criteria:
+    ${criteria.map((c) => `- Criterion [${c.id}]: ${c.name}\n  Description: ${c.description}`).join("\n")}
 
-    Respond with ONLY valid JSON, no other text, in this exact shape:
+    ### Instructions & Persona:
+    1. Focus strictly on Low-Level Design principles: class/interface design, single responsibility (SRP), encapsulation, design patterns, extensibility, and domain relationships.
+    2. Be objective, precise, and practical. Do not praise superficial aspects if key structural abstractions or responsibilities are missing.
+    3. For every failed criterion, provide constructive, actionable guidance on how to fix the design rather than just stating what is wrong.
+
+    ### Strict Output Format:
+    Respond ONLY with a valid JSON object matching this exact shape:
     {
       "results": [
-        { "criterionId": "string", "passed": boolean, "message": "short explanation" }
+        ${criteria.map((c) => `{ "criterionId": "${c.id}", "passed": true, "message": "Clear explanation." }`).join(",\n        ")}
       ]
     }
-    Use these exact criterionId values: ${criteria.map((c) => c.id).join(", ")}
-    `.trim()
-  ;
 
-  //Calling LLM
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    Constraint Checklist:
+    - The "results" array MUST contain exactly ${criteria.length} items.
+    - Match each "criterionId" exactly to the provided criteria IDs: [${criteria.map((c) => `"${c.id}"`).join(", ")}].
+    - Do not add extra conversational text or markdown code blocks.
+  `.trim();
+
+  // 1. LLM Calling
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
+      "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`,
       "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
-      "anthropic-version": "2023-06-01",
+      "Accept": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }],
+      model: "meta/llama-3.2-11b-vision-instruct",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt,
+            },
+          ],
+        },
+      ],
+      max_tokens: 4096,
+      temperature: 0.2,
+      reasoning_effort: "high",
     }),
   });
 
   if (!response.ok) {
-    throw new Error(`AI request failed with status ${response.status}`);
+    const errorBody = await response.text();
+    throw new Error(`NVIDIA API Error Status ${response.status}: ${errorBody}`);
   }
 
-  //response cleanup
   const data = await response.json();
-  const rawText = data.content?.[0]?.text ?? "";
-  const cleaned = rawText.replace(/```json|```/g, "").trim();
+  const rawText = data.choices?.[0]?.message?.content ?? "";
+
+  if (!rawText) {
+    throw new Error("AI returned an empty response.");
+  }
+
+  // 2. Clean reasoning tags (<think>...</think>) and markdown backticks
+  const cleanedText = rawText
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/```json|```/g, "")
+    .trim();
+
+  const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+  const finalJsonString = jsonMatch ? jsonMatch[0] : cleanedText;
 
   let parsed: { results: { criterionId: string; passed: boolean; message: string }[] };
   try {
-    parsed = JSON.parse(cleaned);
-  } catch {
+    parsed = JSON.parse(finalJsonString);
+  } catch (err) {
+    console.error("Raw AI Response:", rawText);
     throw new Error("AI response was not valid JSON");
   }
 
+  // 3. Map back to Criterion result types
   const results: CriterionResult[] = parsed.results.map((r) => {
     const criterion = criteria.find((c) => c.id === r.criterionId);
     return {
       criterionId: r.criterionId,
       name: criterion?.name ?? "Unknown criterion",
-      passed: r.passed,
-      message: r.message,
+      passed: Boolean(r.passed),
+      message: r.message ?? "",
     };
   });
 
+  // 4. Calculate score
   const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0) || 1;
   const earnedWeight = results.reduce((sum, r) => {
     const criterion = criteria.find((c) => c.id === r.criterionId);
@@ -136,7 +173,6 @@ async function runAICheck(
   const score = Math.round((earnedWeight / totalWeight) * 100);
 
   return { score, results };
-
 }
 
 export async function runEvaluation(attemptId: string) {
@@ -149,11 +185,6 @@ export async function runEvaluation(attemptId: string) {
   if (!attempt || !attempt.submission) {
     throw new Error("Cannot evaluate an attempt with no submission");
   }
-
-  await prisma.practiceAttempt.update({
-    where: { id: attemptId },
-    data: { status: "EVALUATING" },
-  });
 
   await prisma.practiceAttempt.update({
     where: { id: attemptId },
@@ -181,23 +212,29 @@ export async function runEvaluation(attemptId: string) {
       ? Math.round((structural.score + ai.score) / 2)
       : structural.score;
 
-    await prisma.evaluation.update({
+    await prisma.evaluation.upsert({
       where: { attemptId },
-      data: {
+      create: {
+        attemptId,
         status: "COMPLETED",
         structuralScore: structural.score,
         structuralFeedback: JSON.parse(JSON.stringify(structural.results)),
         aiScore: ai.results.length > 0 ? ai.score : null,
-        aiFeedback: ai.results.length > 0 
-          ? JSON.parse(JSON.stringify(ai.results)) 
-          : null,
+        aiFeedback: ai.results.length > 0 ? JSON.parse(JSON.stringify(ai.results)) : null,
         overallScore,
-        finalFeedback: JSON.parse(JSON.stringify({
-          structural: structural.results,
-          ai: ai.results,
-        })),
+        finalFeedback: JSON.parse(JSON.stringify({ structural: structural.results, ai: ai.results })),
         completedAt: new Date(),
-      }
+      },
+      update: {
+        status: "COMPLETED",
+        structuralScore: structural.score,
+        structuralFeedback: JSON.parse(JSON.stringify(structural.results)),
+        aiScore: ai.results.length > 0 ? ai.score : null,
+        aiFeedback: ai.results.length > 0 ? JSON.parse(JSON.stringify(ai.results)) : null,
+        overallScore,
+        finalFeedback: JSON.parse(JSON.stringify({ structural: structural.results, ai: ai.results })),
+        completedAt: new Date(),
+      },
     });
 
     await prisma.practiceAttempt.update({
@@ -208,9 +245,14 @@ export async function runEvaluation(attemptId: string) {
   } catch(err: any){
     console.error("Evaluation failed:", err);
 
-    await prisma.evaluation.update({
+    await prisma.evaluation.upsert({
       where: { attemptId },
-      data: {
+      create: {
+        attemptId,
+        status: "FAILED",
+        errorMessage: err instanceof Error ? err.message : "Unknown evaluation error",
+      },
+      update: {
         status: "FAILED",
         errorMessage: err instanceof Error ? err.message : "Unknown evaluation error",
       },
