@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = 'https://cipher-assignment.onrender.com';
 
 export interface Criterion {
   id: string;
